@@ -210,7 +210,7 @@ router.post('/assessment/create', auth.checkToken, (req, res) => {
     let assessment = new Assessment();
     assessment.title = req.body.title;
     assessment.description = req.body.description;
-    assessment.deadline = Date.now();
+    assessment.deadline = req.body.deadline !== undefined ? new Date(req.body.deadline): Date.now();
     assessment.created_at = Date.now();
     User.findOne({ _id: req.decoded.role === "mentor" ? req.decoded.userId : req.body.mentorId }, (err, user) => {
       if (user) {
