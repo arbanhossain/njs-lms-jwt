@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require('mongoose')
 const router = express.Router()
 const jwt = require("jsonwebtoken");
 const User = require("../models/user")
@@ -13,25 +14,119 @@ router.get("/", (req, res) => {
   });
 });
 
+router.get("/verify", auth.checkToken, (req, res) => {
+  if (req.decoded) {
+    return res.status(200).json({
+      message: "Verified"
+    })
+  }
+})
+
+router.get("/user", auth.checkToken, (req, res) => {
+  try {
+    User.findOne({ _id: req.decoded.userId }, function (err, user) {
+      if (err) {
+        console.log(err)
+        return res.status(401).json({
+          message: "User does not exist."
+        });
+      }
+      if (user) {
+        return res.status(200).json({
+          message: "user found",
+          uid: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          joined: user.created_At
+        });
+      }
+    })
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: `${err}`
+    });
+  }
+});
+
+router.get('/assessment', auth.checkToken, (req, res) => {
+  Assessment.find({}, { title: 1, description: 1, mentor: 1, created_at: 1, deadline: 1}, (err, result) => {
+    if (err) return res.status(500).json({ error: `${err}` })
+    console.log(result);
+    return res.status(200).json({message: "Returned", data: result});
+  })
+})
+
+router.get('/assessment/:assessmentID/submissions', auth.checkToken, (req, res) => {
+  try {
+    if(req.decoded.role === "mentor") {
+      Submission.find({assessment: mongoose.Types.ObjectId(req.params.assessmentID)}, (err, result) => {
+        if (err) return res.status(500).json({ error: `${err}` })
+        if (result.length === 0) return res.status(200).json({message: "Success", data: []})
+        let data = []
+        result.forEach((elem, idx, arr) => {
+          User.findOne({_id: mongoose.Types.ObjectId(elem.student)})
+          .then(user => {
+            if(user) {
+              let obj = elem.toObject();
+              obj.student_name = user.name;
+              data.push(obj);
+              if(idx === arr.length - 1) {
+                console.log(data)
+                return res.status(200).json({message: "Success", data: data})
+              }
+            }
+          })
+        });
+      })
+    }
+    if(req.decoded.role === "student") {
+      Submission.find({assessment: mongoose.Types.ObjectId(req.params.assessmentID), student: mongoose.Types.ObjectId(req.decoded.userId)}, (err, result) => {
+        if (err) return res.status(500).json({ error: `${err}` })
+        if (result.length === 0) return res.status(200).json({message: "Success", data: []})
+        let data = []
+        result.forEach((elem, idx, arr) => {
+          User.findOne({_id: mongoose.Types.ObjectId(elem.student)})
+          .then(user => {
+            if(user) {
+              let obj = elem.toObject();
+              obj.student_name = user.name;
+              data.push(obj);
+              if(idx === arr.length - 1) {
+                console.log(data)
+                return res.status(200).json({message: "Success", data: data})
+              }
+            }
+          })
+        });
+      })
+    }
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({ error: `${error}` })
+  }
+})
+
 router.post("/login", (req, res) => {
   try {
     User.findOne({ email: req.body.email }, function (err, user) {
       if (err) {
         console.log(err)
         return res.status(401).json({
-          error: "Auth failed"
+          error: `${err}`
         });
       }
       if (!user) {
         console.log("No user found.")
         return res.status(401).json({
-          error: "Auth failed"
+          error: "No user found"
         });
       }
       if (!user.validPassword(req.body.password)) {
         req.flash('error', 'Wrong password');
         return res.status(401).json({
-          error: "Auth failed"
+          error: "Invalid Password"
         });
       }
       if (user) {
@@ -70,22 +165,30 @@ router.post("/register", async (req, res) => {
         error: "Role should be admin, student or mentor"
       });
     }
-    const user = new User();
-    user.email = req.body.email;
-    user.role = req.body.role;
-    user.password = user.encryptPassword(req.body.password);
-    user.created_At = Date.now();
-    user.save((error, result) => {
-      if (error) {
-        console.log(err)
-        res.status(500).json({
-          error: "An error has occured when saving the user"
+    User.findOne({email: req.body.email}, (err, result) => {
+      if (result) {
+        return res.status(500).json({
+          error: "An user already exists with that email"
         })
-      } else {
-        res.status(201).json({
-          message: "User created."
-        });
       }
+      const user = new User();
+      user.email = req.body.email;
+      user.role = req.body.role;
+      user.name = req.body.name;
+      user.password = user.encryptPassword(req.body.password);
+      user.created_At = Date.now();
+      user.save((error, result) => {
+        if (error) {
+          console.log(error)
+          res.status(500).json({
+            error: "An error has occured when saving the user"
+          })
+        } else {
+          res.status(201).json({
+            message: "User created."
+          });
+        }
+      })
     })
   } catch (e) {
     console.log(e)
@@ -148,6 +251,7 @@ router.post("/assessment/:assessmentID/submit", auth.checkToken, (req, res) => {
   }
   let submission = new Submission();
   submission.submission_date = Date.now();
+  submission.files = req.body.files;
   if (req.body.grade && req.decoded.role === "admin") submission.grade = req.body.grade;
   try {
     Promise.all([
@@ -238,8 +342,8 @@ router.put("/assessment/:assessmentID/:submissionID", auth.checkToken, (req, res
 })
 
 router.put("/assessment/:assessmentID/:submissionID/grade", auth.checkToken, (req, res) => {
-  if (req.decoded.role !== "admin") return res.status(401).json({ error: "You are not authorized to edit a user" })
-  if (req.body.grade === undefined) return res.status(401).json({ error: "No updated fields were found" })
+  if (req.decoded.role !== "admin") return res.status(401).json({ error: "You are not authorized to edit a grade" })
+  if (req.body.grade === undefined) return res.status(400).json({ error: "No updated fields were found" })
   try {
     Submission.findOneAndUpdate({ _id: req.params.submissionID }, { $set: {grade: req.body.grade} }, (err, result) => {
       if (err) return res.status(500).json({ error: "Could not update grade" })
@@ -336,31 +440,5 @@ router.delete("/user/:uid", auth.checkToken, (req, res) => {
   }
 })
 
-router.get("/user/:uid", auth.checkToken, (req, res) => {
-  try {
-    User.findOne({ _id: req.params.uid }, function (err, user) {
-      if (err) {
-        console.log(err)
-        return res.status(401).json({
-          message: "User does not exist."
-        });
-      }
-      if (user) {
-        return res.status(200).json({
-          message: "user found",
-          uid: user._id,
-          email: user.email,
-          role: user.role,
-          joined: user.created_At
-        });
-      }
-    })
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      error: err
-    });
-  }
-});
 
 module.exports = router

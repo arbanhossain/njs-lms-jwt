@@ -10,8 +10,8 @@ let checkToken = (req, res, next) => {
   if (token) {
     jwt.verify(token, process.env.SECRET, (err, decoded) => {
       if (err) {
-        return res.json({
-          message: 'Token is not valid'
+        return res.status(401).json({
+          error: 'Token is not valid'
         });
       } else {
         req.decoded = decoded;
