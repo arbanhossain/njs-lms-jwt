@@ -1,3 +1,4 @@
+The project is deployed at https://node-assessment.herokuapp.com/ if you want to test the api remotely.
 ### Necessary steps
 - Run `npm install` to install necessary packages
 - Install npm packages `mocha` and `nodemon` globally.
@@ -24,7 +25,6 @@
   ```
   The client should be available at port `3000`
 - Mentor and student calls can be performed with the client. Use Postman or cURL for performing admin calls.
-- The project is deployed at heroku for convenience.
 
 ### Unit Testing
 Make sure you have installed necessary packages with `npm install` , installed `mocha` and `nodemon` globally, and replaced `MONGODB` in the `.env` with your database URI. Start the development server by running `npm run dev`. For running the tests, run either
