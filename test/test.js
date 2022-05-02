@@ -2,6 +2,16 @@ const supertest = require('supertest');
 const should = require('should');
 const userCollection = require('../models/user');
 
+const mongoose = require('mongoose');
+
+const dotenv = require("dotenv");
+dotenv.config("../.env");
+
+mongoose.connect(process.env.MONGODB, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
+
 const server = supertest.agent("http://localhost:5000");
 
 let mentor_token = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1lbnRvckBhcmJhbi5jb20iLCJ1c2VySWQiOiI2MjY5NDc0OWI3MjE3MzEzOTNiMzUwNDEiLCJyb2xlIjoibWVudG9yIiwiaWF0IjoxNjUxMjQxNzI1LCJleHAiOjE2NTEyODQ5MjV9.0t_pZ0dzcjH0LzrA-9JkU4sLgu76ZDg5wnK5Wbraqag`;
@@ -20,10 +30,22 @@ let submission_id = ``;
 // START UNIT TESTING
 
 ///
+/// DATABASE
+///
+
+describe("Database", () => {
+  it("deleted existing admin", done  => {
+    userCollection.findOneAndDelete({email: "testadmin@arban.com"}, (err, result) => {
+      done();
+    })
+  })
+})
+
+///
 /// REGISTER
 ///
 describe("Register", () => {
-  it("(WILL ONLY WORK WITH A FRESH DATABASE | CHECK TEST DOCUMENTATION) registers an admin", done => {
+  it("registers an admin", done => {
     server.post("/api/register")
       .send({ email: "testadmin@arban.com", password: "password", role: "admin", name: "Test Admin" })
       .expect(201)
@@ -665,17 +687,5 @@ describe("Users (DELETE)", () => {
 
         done();
       })
-  })
-})
-
-///
-/// DATABASE
-///
-
-describe("Database", () => {
-  it("emptied the users collection", async (done) => {
-    userCollection.remove({}, (err, res) => {
-      done();
-    })
   })
 })
