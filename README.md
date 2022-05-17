@@ -1,3 +1,5 @@
+Project requirements specification document: See `Project Specs.pdf`
+
 The project is deployed at https://node-assessment.herokuapp.com/ if you want to test the api remotely.
 ### Necessary steps
 - Run `npm install` to install necessary packages
@@ -12,7 +14,7 @@ The project is deployed at https://node-assessment.herokuapp.com/ if you want to
   npm run dev
   ```
   The server will be available on port `5000`.
-- All the endpoints are available at `/api`. See `Documentation.pdf` for the full documentation of the API.
+- All the endpoints are available at `/api`. See `DOCUMENTATION.pdf` for the full documentation of the API.
 - Use a REST client like Postman or cURL to make calls to the API
 - A barebones react frontend is provided for graphical interaction with the API.
 - Install necessary packages for the frontend:
