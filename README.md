@@ -1,6 +1,8 @@
 Project requirements specification document: See `Project Specs.pdf`
 
 The project is deployed at https://node-assessment.herokuapp.com/ if you want to test the api remotely.
+
+See DOCUMENTATION.md for API reference.
 ### Necessary steps
 - Run `npm install` to install necessary packages
 - Install npm packages `mocha` and `nodemon` globally.
